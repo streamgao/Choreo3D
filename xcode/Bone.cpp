@@ -18,6 +18,16 @@ Bone::Bone(Joint *_a, Joint *_b, float l){
     len = l;
 }
 
+Bone::Bone(Joint *_a, Joint *_b, float l, int ref1, int ref2){
+    a=_a;
+    b=_b;
+    len = l;
+    refnum1 = ref1;
+    refnum2 = ref2;
+    std::cout<<"refnum: "<<refnum1<<':'<<refnum2<<std::endl;
+}
+
+
 void Bone::display(){
     gl::color(0.7, 0.7, 1.);
     gl::drawLine(a->location, b->location);
@@ -27,10 +37,6 @@ void Bone::display(){
 void Bone::update(){
     ci::vec3 force = a->location - b->location;
     float stretch = distance(force,glm::vec3(.0,.0,.0) ) - len;
-    
-    //stretch = std::abs(stretch)>30 ? (stretch- 20*(std::abs(stretch)/stretch)) : 0;
-    //if( std::abs(stretch)>100 )
-    //    stretch = 100*(std::abs(stretch)+1)/(stretch+1);
     
     //RESTRICT STRECH,  DENOISE MOCAP DATA
     stretch = std::abs(stretch)>100 ? stretch : 0;
@@ -46,6 +52,26 @@ void Bone::update(){
     b->applyForce(force);
 }
 
+
+void Bone::update(float l){
+    //len = l;
+    len = (l+len)/2;
+    ci::vec3 force = a->location - b->location;
+    float stretch = distance(force,glm::vec3(.0,.0,.0) ) - len;
+    
+    //RESTRICT STRECH,  DENOISE MOCAP DATA
+    stretch = std::abs(stretch)>50 ? stretch : 0;
+    
+    force = normalize(force);
+    force *= -1*k*stretch;
+    
+    force = forceconstrain( force );
+    
+    //PUSH 2 JOINTS
+    a->applyForce(force);
+    force *= -1;
+    b->applyForce(force);
+}
 
 
 float Bone::lengthconstrain(float dis){

@@ -197,7 +197,7 @@ void Choreo3DApp::setup()
         float instanceZ = jointList[i].jointPositions[0].z;
         // float instanceZ = 0;
         
-        framePositions.push_back( vec3( instanceX, instanceY, instanceZ));
+        framePositions.push_back( vec3( instanceX, instanceY, instanceZ) );
     }
     
     skeleton = Skeleton(framePositions);
@@ -218,10 +218,9 @@ void Choreo3DApp::setup()
     mSphereBatch = gl::Batch::create( body, mGlsl, { { geom::Attrib::CUSTOM_0, "vInstancePosition" } } );
     
     //PRINT OUT JOINT INDEX AND NAME OF JOINT
-    
-    for (int i = 0; i < jointList.size(); i++){
-        std::cout << "index: " << i << ", Joint name: " << jointList[i].jointName << std::endl;
-    }
+//    for (int i = 0; i < jointList.size(); i++){
+//        std::cout << "index: " << i << ", Joint name: " << jointList[i].jointName << std::endl;
+//    }
     
     //SETUP RIBBONS
     for (auto i = 0; i < jointList.size(); i += 1){
@@ -334,7 +333,13 @@ void Choreo3DApp::update()
             //std::cout<<"frame count: "<<FRAME_COUNT<<endl;
         } else {//paused
             FRAME_COUNT = 0;
+            reset();
         }
+        
+        if(FRAME_COUNT==1){
+            skeleton.reset(framePositions);
+        }
+        
         mCurrentFrame++; //MANUALLY ADVANCE THE CURRENT FRAME - WITH RESPECT TO THE DANCERS
     }
     updateGui();
@@ -412,9 +417,6 @@ void Choreo3DApp::draw()
 
 //--------------------  KEY DOWN -----------------------------
 void Choreo3DApp::keyDown( KeyEvent event ){
-    //skeleton.pushone(vec3(200,200,0));
-    //writeImage( getDocumentsDirectory() / "Cinder" / "screenshots"/ "CCL_images" / "saveImage_" /( toString( mCurrentFrame ) + ".png" ), copyWindowSurface() );
-    
 //    int i = event.getCode();
 //    cinder::app::console()<<i-48<<std::endl;
 //    skeleton.push(vec3(500,-300,500), i-48);
@@ -452,8 +454,8 @@ void Choreo3DApp::setupEnviron( int xSize, int zSize, int spacing )
     }// end for each z dir line
     
     //SETUP THE CAMERA
-    mCamera.setEyePoint(vec3(500,1000,0));
-    mCamera.lookAt( vec3( 5400, 3400, 5800 ), vec3( 0 ) );
+    mCamera.setEyePoint(vec3(3000,1000,2000));
+    mCamera.lookAt( vec3( 3000, 3500, 5800 ), vec3( 2000,1000, 1000 ) );
     mCamera.setFarClip(20000);
 }
 
@@ -535,16 +537,15 @@ void Choreo3DApp::initGui(){
 
 //------------------------ D I S P L A Y  G U I -------------------------
 void Choreo3DApp::updateGui(){
-    skeletongui.updateGUISke( &NewSkeletonActive );
-    //skeletongui.drawSkeimage( &NewSkeletonActive );
-    
     //CREATE A WINDOW
     ui::ScopedWindow window( "Choreo3D", ImGuiWindowFlags_NoMove);
-    ui::SetWindowPos(ImVec2(920.0, getWindowHeight()-550));
+    //ui::SetWindowPos(ImVec2(920.0, getWindowHeight()-550));
+    
+    ui::SetWindowPos(ImVec2(920.0, 0));
     ImVec2 const SkeSize = ImVec2(360,540.0);
     ui::SetWindowSize(SkeSize, 0);
-    
     ImVec2 spacing = ImVec2(15.,10.);
+    
     ui::PushStyleVar(ImGuiStyleVar_ItemSpacing, spacing);
     
     //PLAY / PAUSE DANCER
@@ -552,22 +553,20 @@ void Choreo3DApp::updateGui(){
     //SHOW GRID
     ui::SameLine();
     ui::Checkbox("SHOW FLOOR", &showGrid);
-    ui::SameLine();    if( ui::Button( "RESET" ) )   reset();
-
+    ui::SameLine();    if( ui::Button( "RESET" ) ) {
+       reset(); //reset();
+    }
 
     //CREATE A SLIDING BAR TO SET THE BACKGROUND COLOR
     ImGui::SliderInt("SPEED", &frameRate, 0, 60);
-    
     ui::Spacing();
     //CREATE A SLIDING BAR TO SET THE BACKGROUND COLOR
     ui::ColorEdit3("BACKGROUND", &testBK[0] );
-    
     ui::Spacing();
     
     //SHOW MOCAP MARKERS
     ui::Checkbox("MOCAP MARKERS", &markersActive);
     ui::ColorEdit4("MARKER COLOUR", &markerColour[0] );
-    
     ui::Spacing();
  
     //RIBBONS
@@ -579,20 +578,17 @@ void Choreo3DApp::updateGui(){
     ui::Checkbox("ORIGINAL SKELETON", &MocapSkeletonActive);   ui::SameLine();
     ui::Checkbox("NEW SKELETON", &NewSkeletonActive);
     ImGui::TextWrapped("Turn off multiple dancer mode to see skeleton");
-    
     ui::Spacing();
     
     //SHOW PATH
     ui::Checkbox("PATH", &trailsActive);
     ui::Spacing();
     
-    
     ui::Checkbox("MULTIPLE DANCERS", &multipledancers);
     
     if(multipledancers){
         MocapSkeletonActive = false;
         NewSkeletonActive = false;
-        
         ui::Checkbox("DANCER1", &isDancer1); ui::SameLine();
         ImGui::SliderInt("D1 TIME", &fpsDancer1, 1, 60);
         ui::Checkbox("DANCER2", &isDancer2); ui::SameLine();
@@ -610,8 +606,10 @@ void Choreo3DApp::updateGui(){
         isDancer4 = false;
         isDancer5 = false;
     }
-
     ui::PopStyleVar();
+    
+    
+    skeletongui.updateGUISke( &NewSkeletonActive );
 }
 
 void Choreo3DApp::reset(){
@@ -621,13 +619,24 @@ void Choreo3DApp::reset(){
     handTrail.prevPos = handTrail.positions[0];
     handTrail.positions.clear();
     
+    //update();
+    //draw();
+    //updateGui
     // skeleton need to reset twice, 1st time align the last frame. next time align the 1st frame
-    skeleton.reset();
-    skeleton.reset();
+//    for( int i = 0; i < jointList.size(); ++i )
+//    {
+//        float instanceX = jointList[i].jointPositions[FRAME_COUNT].x;
+//        float instanceY = jointList[i].jointPositions[FRAME_COUNT].y;
+//        float instanceZ = jointList[i].jointPositions[FRAME_COUNT].z;
+//        
+//        vec3 newPos(vec3(instanceX,instanceY, instanceZ)); //CREATE A NEW VEC3 FOR UPDATING THE VBO
+//        framePositions[i] = newPos;
+//    }
+    skeleton.reset(framePositions);
 }
 
 
 CINDER_APP( Choreo3DApp, RendererGl(RendererGl::Options().msaa( 16 ) ), [&]( App::Settings *settings ) {
     settings->setWindowSize( 1280, 720 );
-    //settings->setFullScreen();
+     settings->setFullScreen();
 } )
